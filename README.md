@@ -3,7 +3,7 @@ Goal
 - challenge myself technically
 - make a dashboard camera that can record video and read license plates within
   2-3 weeks during evening and weekend hours
-- dahsboard camera consists of:
+- dashboard camera consists of:
     - Arduino Uno R3 (micro controller)
     - OV2640 camera (2 Megapixels)
     - HC-05 Bluetooth
@@ -30,4 +30,8 @@ Goal
 - Bluetooth needs 3.5V input but Arduino outputs 5V so I needed to order
   resistors along with my camera
 
+References
+----------
+- my phone specs https://www.gsmarena.com/samsung_galaxy_a5_(2017)-8494.php
+    - GPU supports OpenCL https://www.notebookcheck.net/ARM-Mali-T830-MP3.196668.0.html
 

@@ -1,0 +1,31 @@
+- decide what parts should be in C++ and what parts should be in Java
+    - wanna demo cpp capabilities
+    - however, time constraints mean certain areas should be done in Java
+    - I have encountered starter codes for bluetooth camera.
+        - in fact, a 2014 SO answer (https://stackoverflow.com/a/26059884) mentions that there's
+          no direct NDK API for Android's Bluetooth.
+          https://developer.android.com/ndk/reference/ seems to support this
+          opinion.
+        - seems like the camera might be in C++ but the bluetooth would need to be in Java
+    - this SO post (https://stackoverflow.com/a/36802988) is very helpful on
+      the theoretical workflow of setting up OpenCL projects on Android
+
+- Bluetooth module should get 3.3V input but Uno R3 has 5V.
+  http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/
+  says we should use voltage dividers to reduce the voltage
+    - https://learn.sparkfun.com/tutorials/voltage-dividers/all has good
+      explanation. Basically, V_{out} = V_{in} * \frac{R_2}{R_1 + R_2}. There's
+      also online voltage divider calculators. However, while I can decide the
+      ratio of resistor 1 & 2, I'm not sure how to choose their absolute values
+      until I came across this SO post:
+      https://electronics.stackexchange.com/a/28903. Basically, the 2 chosen
+      bluetooth module's resistance should be as close to the module as
+      possible to avoid wasting current but also as large as possible to .
+    - in addition, the martyncurrey site says to just use 1k & 2k resistors
+
+- just realized that both the camera and the bluetooth modules need to use the RX & TX ports. Googling turned up this (https://www.arduino.cc/en/Reference/softwareSerial) which is using a software library to make other digital ports emulate RX/TX but some forum post (https://forum.arduino.cc/index.php?topic=480844.0) suggests it's not good enough?
+
+- read resistor bands left to right with closer bands being on left side; https://www.digikey.ca/en/resources/conversion-calculators/conversion-calculator-resistor-color-code-5-band helps me check that the bands are actually 1k & 2k
+
+- TODO: https://github.com/arduino/arduino-cli/blob/master/CONTRIBUTING.md incorporate arduino-cli so that we can automate the arduino setup
+
