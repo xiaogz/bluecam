@@ -29,3 +29,10 @@
 
 - TODO: https://github.com/arduino/arduino-cli/blob/master/CONTRIBUTING.md incorporate arduino-cli so that we can automate the arduino setup
 
+** apparently boards with only 1 RX & TX can create conflicts if those HW ports are occupied while a sketch is being uploaded to the board (see https://www.instructables.com/id/Remotely-Control-LED-using-HC-05-Bluetooth-Arduino/)
+
+** sample sketches using SoftSerial library did not work! SoftSerial is not reliable...
+    - nope it was just me not understanding how serial ports worked at all...
+    - tutorial http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/ uses the HW serial port to communicate between PC and Uno R3 and a SW emulated serial port to communicate between Uno R3 and the HC05
+    - AT commands work if you just hold down the small button on the HC05 module. You don't need to hold it all the time: just once when powering it up such that the blinker is once every 5s (enters AT mode) and then everytime you need to send it a command
+** try https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html which limits us to pin 8 & 9
