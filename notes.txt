@@ -36,3 +36,15 @@
     - tutorial http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/ uses the HW serial port to communicate between PC and Uno R3 and a SW emulated serial port to communicate between Uno R3 and the HC05
     - AT commands work if you just hold down the small button on the HC05 module. You don't need to hold it all the time: just once when powering it up such that the blinker is once every 5s (enters AT mode) and then everytime you need to send it a command
 ** try https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html which limits us to pin 8 & 9
+    - this is a future TODO in case the default library is not fast enough
+
+- https://www.arducam.com/arducam-bluetooth-module-wireless-image-system/ discusses the OV2640 camera's data transfer rate using different image capture configs; seems like we will be stretching the hardware to its limit. We need JPEG compression so that we send 3-6kBytes per frame instead of 150kBytes for a 320x240 image
+
+- actually ArduCAM has their own Github repo with a working bluetooth + camera arduino project
+
+- now onto Android app: use the bluetooth skeleton and add another activity that will take from a sample opencl app
+
+- TODO: think of how to validate the performance of our project
+    - how many frames per second can the dashcam send over bluetooth? try different resolutions?
+    - how much time would our app take to process each image?
+
