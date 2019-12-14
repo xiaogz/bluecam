@@ -27,29 +27,29 @@
 #include <Wire.h>
 // This demo can only work on OV2640_MINI_2MP or OV5642_MINI_5MP or
 // OV5642_MINI_5MP_BIT_ROTATION_FIXED platform.
-#if !(defined OV5642_MINI_5MP || defined OV5642_MINI_5MP_BIT_ROTATION_FIXED ||                     \
+#if !(defined OV5642_MINI_5MP || defined OV5642_MINI_5MP_BIT_ROTATION_FIXED || \
       defined OV2640_MINI_2MP || defined OV3640_MINI_3MP)
 #error Please select the hardware platform and camera module in the ../libraries/ArduCAM/memorysaver.h file
 #endif
 #define BMPIMAGEOFFSET 66
-const char bmp_header[BMPIMAGEOFFSET] PROGMEM = {
+const unsigned char bmp_header[BMPIMAGEOFFSET] PROGMEM = {
     0x42, 0x4D, 0x36, 0x58, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x42, 0x00, 0x00, 0x00,
     0x28, 0x00, 0x00, 0x00, 0x40, 0x01, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01, 0x00,
     0x10, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x58, 0x02, 0x00, 0xC4, 0x0E, 0x00, 0x00,
     0xC4, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8,
     0x00, 0x00, 0xE0, 0x07, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00
 };
-// set pin 7 as the slave select for the digital pot:
-const int CS = 7;
+// set pin 7 as the slave select for the digital port:
+const int g_CS = 7;
 bool is_header = false;
 int mode = 0;
 uint8_t start_capture = 0;
 #if defined(OV2640_MINI_2MP)
-ArduCAM myCAM(OV2640, CS);
+ArduCAM myCAM(OV2640, g_CS);
 #elif defined(OV3640_MINI_3MP)
-ArduCAM myCAM(OV3640, CS);
+ArduCAM myCAM(OV3640, g_CS);
 #else
-ArduCAM myCAM(OV5642, CS);
+ArduCAM myCAM(OV5642, g_CS);
 #endif
 uint8_t read_fifo_burst(ArduCAM myCAM);
 void setup()
@@ -57,17 +57,14 @@ void setup()
     // put your setup code here, to run once:
     uint8_t vid, pid;
     uint8_t temp;
-#if defined(__SAM3X8E__)
-    Wire1.begin();
-    Serial.begin(115200);
-#else
+
     Wire.begin();
     Serial.begin(115200);
-#endif
+
     Serial.println(F("ACK CMD ArduCAM Start! END"));
-    // set the CS as an output:
-    pinMode(CS, OUTPUT);
-    digitalWrite(CS, HIGH);
+    // set the g_CS as an output:
+    pinMode(g_CS, OUTPUT);
+    digitalWrite(g_CS, HIGH);
     // initialize SPI:
     SPI.begin();
     // Reset the CPLD
