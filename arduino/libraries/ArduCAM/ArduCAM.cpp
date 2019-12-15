@@ -634,22 +634,22 @@ void ArduCAM::InitCAM()
     }
 }
 
-void ArduCAM::flush_fifo(void)
+void ArduCAM::flush_fifo()
 {
     write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
 }
 
-void ArduCAM::start_capture(void)
+void ArduCAM::start_capture()
 {
     write_reg(ARDUCHIP_FIFO, FIFO_START_MASK);
 }
 
-void ArduCAM::clear_fifo_flag(void)
+void ArduCAM::clear_fifo_flag()
 {
     write_reg(ARDUCHIP_FIFO, FIFO_CLEAR_MASK);
 }
 
-uint32_t ArduCAM::read_fifo_length(void)
+uint32_t ArduCAM::read_fifo_length()
 {
     uint32_t len1, len2, len3, length = 0;
     len1 = read_reg(FIFO_SIZE1);
@@ -683,16 +683,16 @@ void ArduCAM::set_fifo_burst()
 #endif
 }
 
-void ArduCAM::CS_HIGH(void)
+void ArduCAM::CS_HIGH()
 {
     sbi(P_CS, B_CS);
 }
-void ArduCAM::CS_LOW(void)
+void ArduCAM::CS_LOW()
 {
     cbi(P_CS, B_CS);
 }
 
-uint8_t ArduCAM::read_fifo(void)
+uint8_t ArduCAM::read_fifo()
 {
     uint8_t data;
     data = bus_read(SINGLE_FIFO_READ);

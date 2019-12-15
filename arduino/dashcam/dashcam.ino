@@ -7,7 +7,7 @@
 // It can take photo continuously as video streaming.
 //
 // The demo sketch will do the following tasks:
-// 1. Set the camera to JPEG output mode.
+// 1. Set the camera to JPEG output g_mode.
 // 2. Read data from Serial port and deal with it
 // 3. If receive 0x00-0x08,the resolution will be changed.
 // 4. If receive 0x10,camera will capture a JPEG photo and buffer the image to FIFO.Then write datas
@@ -16,8 +16,8 @@
 // 0x21.
 // 6. If receive 0x30,camera will capture a BMP  photo and buffer the image to FIFO.Then write datas
 // to Serial port.
-// 7. If receive 0x11 ,set camera to JPEG output mode.
-// 8. If receive 0x31 ,set camera to BMP  output mode.
+// 7. If receive 0x11 ,set camera to JPEG output g_mode.
+// 8. If receive 0x31 ,set camera to BMP  output g_mode.
 // This program requires the ArduCAM V4.0.0 (or later) library and ArduCAM_Mini_2MP_Plus
 // and use Arduino IDE 1.6.8 compiler or above
 #include "memorysaver.h"
@@ -41,7 +41,7 @@ const unsigned char bmp_header[BMPIMAGEOFFSET] PROGMEM = {
 // set pin 7 as the slave select for the digital port:
 const int g_CS = 7;
 bool is_header = false;
-int mode = 0;
+static int g_mode = 0;
 uint8_t start_capture = 0;
 #if defined(OV2640_MINI_2MP_PLUS)
 ArduCAM myCAM(OV2640, g_CS);
@@ -101,7 +101,7 @@ void setup()
         }
     }
 #endif
-    // Change to JPEG capture mode and initialize the OV5642 module
+    // Change to JPEG capture g_mode and initialize the OV5642 module
     myCAM.set_format(JPEG);
     myCAM.InitCAM();
 #if defined(OV2640_MINI_2MP_PLUS)
@@ -255,7 +255,7 @@ void loop()
 #endif
             break;
         case 0x10:
-            mode = 1;
+            g_mode = 1;
             temp = 0xff;
             start_capture = 1;
             Serial.println(F("ACK CMD CAM start single shoot. END"));
@@ -268,13 +268,13 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_320x240);
             break;
         case 0x20:
-            mode = 2;
+            g_mode = 2;
             temp = 0xff;
             start_capture = 2;
             Serial.println(F("ACK CMD CAM start video streaming. END"));
             break;
         case 0x30:
-            mode = 3;
+            g_mode = 3;
             temp = 0xff;
             start_capture = 3;
             Serial.println(F("ACK CMD CAM start single shoot. END"));
@@ -289,7 +289,7 @@ void loop()
         }
     }
 
-    if (mode == 1) {
+    if (g_mode == 1) {
         if (start_capture == 1) {
             myCAM.flush_fifo();
             myCAM.clear_fifo_flag();
@@ -305,12 +305,12 @@ void loop()
             myCAM.clear_fifo_flag();
         }
     }
-    else if (mode == 2) {
+    else if (g_mode == 2) {
         while (1) {
             temp = Serial.read();
             if (temp == 0x21) {
                 start_capture = 0;
-                mode = 0;
+                g_mode = 0;
                 Serial.println(F("ACK CMD CAM stop video streaming. END"));
                 break;
             }
@@ -330,7 +330,7 @@ void loop()
                     continue;
                 }
                 myCAM.CS_LOW();
-                myCAM.set_fifo_burst(); // Set fifo burst mode
+                myCAM.set_fifo_burst(); // Set fifo burst g_mode
                 temp = SPI.transfer(0x00);
                 length--;
                 while (length--) {
@@ -356,7 +356,7 @@ void loop()
             }
         }
     }
-    else if (mode == 3) {
+    else if (g_mode == 3) {
         if (start_capture == 3) {
             // Flush the FIFO
             myCAM.flush_fifo();
@@ -368,7 +368,7 @@ void loop()
         if (myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
             Serial.println(F("ACK CMD CAM Capture Done. END"));
             delay(50);
-            uint8_t temp, temp_last;
+            uint8_t temp;
             uint32_t length = 0;
             length = myCAM.read_fifo_length();
             if (length >= MAX_FIFO_SIZE) {
@@ -383,7 +383,7 @@ void loop()
                 return;
             }
             myCAM.CS_LOW();
-            myCAM.set_fifo_burst(); // Set fifo burst mode
+            myCAM.set_fifo_burst(); // Set fifo burst g_mode
 
             Serial.write(0xFF);
             Serial.write(0xAA);
@@ -432,7 +432,7 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
     }
 
     myCAM.CS_LOW();
-    myCAM.set_fifo_burst(); // Set fifo burst mode
+    myCAM.set_fifo_burst(); // Set fifo burst g_mode
     temp = SPI.transfer(0x00);
     length--;
     while (length--) {

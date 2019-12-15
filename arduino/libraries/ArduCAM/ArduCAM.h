@@ -624,11 +624,12 @@ ArduCAM-Mini-5MP-Plus(OV5642/OV5640). 2016/10/28  V4.0.1  by Lee	Add support for
 // Define maximum frame buffer size
 #if (defined OV2640_MINI_2MP)
 #define MAX_FIFO_SIZE 0x5FFFF // 384KByte
-#elif (defined OV5642_MINI_5MP || defined OV5642_MINI_5MP_BIT_ROTATION_FIXED ||                    \
+#elif (defined OV5642_MINI_5MP || \
+       defined OV5642_MINI_5MP_BIT_ROTATION_FIXED || \
        defined ARDUCAM_SHIELD_REVC)
-#define MAX_FIFO_SIZE 0x7FFFF // 512KByte
+ #define MAX_FIFO_SIZE 0x7FFFF // 512KByte
 #else
-#define MAX_FIFO_SIZE 0x7FFFFF // 8MByte
+ #define MAX_FIFO_SIZE 0x7FFFFF // 8MByte
 #endif
 
 /****************************************************/
@@ -640,9 +641,10 @@ ArduCAM-Mini-5MP-Plus(OV5642/OV5640). 2016/10/28  V4.0.1  by Lee	Add support for
 #define ARDUCHIP_TEST1 0x00 // TEST register
 
 #if !(defined OV2640_MINI_2MP)
-#define ARDUCHIP_FRAMES                                                                            \
-    0x01 // FRAME control register, Bit[2:0] = Number of frames to be captured
-         // //On 5MP_Plus platforms bit[2:0] = 7 means continuous capture until frame buffer is full
+// FRAME control register, Bit[2:0] = Number of frames to be captured On
+// 5MP_Plus platforms bit[2:0] = 7 means continuous capture until frame buffer
+// is full
+ #define ARDUCHIP_FRAMES 0x01
 #endif
 
 #define ARDUCHIP_MODE 0x02 // Mode register
@@ -650,18 +652,17 @@ ArduCAM-Mini-5MP-Plus(OV5642/OV5640). 2016/10/28  V4.0.1  by Lee	Add support for
 #define CAM2LCD_MODE 0x01
 #define LCD2MCU_MODE 0x02
 
-#define ARDUCHIP_TIM 0x03 // Timming control
+#define ARDUCHIP_TIM 0x03 // Timing control
 #if !(defined OV2640_MINI_2MP)
-#define HREF_LEVEL_MASK 0x01  // 0 = High active , 		1 = Low active
-#define VSYNC_LEVEL_MASK 0x02 // 0 = High active , 		1 = Low active
-#define LCD_BKEN_MASK 0x04    // 0 = Enable, 					1 = Disable
-#if (defined ARDUCAM_SHIELD_V2)
-#define PCLK_REVERSE_MASK 0x08 // 0 = Normal PCLK, 		1 = REVERSED PCLK
-#else
-#define PCLK_DELAY_MASK 0x08 // 0 = data no delay,		1 = data delayed one PCLK
-#endif
-//#define MODE_MASK          		0x10  //0 = LCD mode, 				1 = FIFO
-//mode
+ #define HREF_LEVEL_MASK 0x01  // 0 = High active, 1 = Low active
+ #define VSYNC_LEVEL_MASK 0x02 // 0 = High active, 1 = Low active
+ #define LCD_BKEN_MASK 0x04    // 0 = Enable, 1 = Disable
+ #if (defined ARDUCAM_SHIELD_V2)
+  #define PCLK_REVERSE_MASK 0x08 // 0 = Normal PCLK, 		1 = REVERSED PCLK
+ #else
+  #define PCLK_DELAY_MASK 0x08 // 0 = data no delay,		1 = data delayed one PCLK
+ #endif
+ //#define MODE_MASK 0x10  //0 = LCD mode, 1 = FIFO mode
 #endif
 //#define FIFO_PWRDN_MASK	   		0x20  	//0 = Normal operation, 1 = FIFO power down
 //#define LOW_POWER_MODE			  0x40  	//0 = Normal mode, 			1 = Low
@@ -717,23 +718,23 @@ struct sensor_reg
 class ArduCAM
 {
   public:
-    ArduCAM(void);
+    ArduCAM();
     ArduCAM(byte model, int CS);
-    void InitCAM(void);
+    void InitCAM();
 
-    void CS_HIGH(void);
-    void CS_LOW(void);
+    void CS_HIGH();
+    void CS_LOW();
 
-    void flush_fifo(void);
-    void start_capture(void);
-    void clear_fifo_flag(void);
-    uint8_t read_fifo(void);
+    void flush_fifo();
+    void start_capture();
+    void clear_fifo_flag();
+    uint8_t read_fifo();
 
     uint8_t read_reg(uint8_t addr);
     void write_reg(uint8_t addr, uint8_t data);
 
-    uint32_t read_fifo_length(void);
-    void set_fifo_burst(void);
+    uint32_t read_fifo_length();
+    void set_fifo_burst();
 
     void set_bit(uint8_t addr, uint8_t bit);
     void clear_bit(uint8_t addr, uint8_t bit);
