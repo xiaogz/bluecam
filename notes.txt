@@ -40,6 +40,8 @@
 
 - https://www.arducam.com/arducam-bluetooth-module-wireless-image-system/ discusses the OV2640 camera's data transfer rate using different image capture configs; seems like we will be stretching the hardware to its limit. We need JPEG compression so that we send 3-6kBytes per frame instead of 150kBytes for a 320x240 image
 
+- IMPORTANT: Arduino's USB communicates on UART serial protocol; if any module is sending data using port 0/1 then uploading sketches can fail
+
 - actually ArduCAM has their own Github repo with a working bluetooth + camera arduino project
     - the working bluetooth camera project is for 2MP mini and not for 2MP mini plus; I have to ensure there's nothing breaking the code and/or circuits
         - so far, in arduino/libraries/ArduCAM/ArduCAM.h, we see that the mini has smaller frame buffer (384kb) compared to the mini plus (8Mb)

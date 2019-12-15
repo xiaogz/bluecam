@@ -27,7 +27,7 @@
 // This demo can only work on OV2640_MINI_2MP_PLUS platform.
 
 #if !(defined OV2640_MINI_2MP_PLUS)
-#error Please select the correct hardware platform and camera module in the ../libraries/ArduCAM/memorysaver.h file
+ #error Please select the correct hardware platform and camera module in the ../libraries/ArduCAM/memorysaver.h file
 #endif
 
 #define BMPIMAGEOFFSET 66
@@ -51,11 +51,14 @@ uint8_t read_fifo_burst(ArduCAM myCAM);
 void setup()
 {
     // put your setup code here, to run once:
-    uint8_t vid, pid;
+    uint8_t vid;
+    uint8_t pid;
     uint8_t temp;
 
     Wire.begin();
     Serial.begin(921600);
+    // reduce this rate and see if bluetooth module works
+    //Serial.begin(115200);
 
     Serial.println(F("ACK CMD ArduCAM Start! END"));
     // set the g_CS as an output:
@@ -113,8 +116,10 @@ void setup()
 
 void loop()
 {
-    uint8_t temp = 0xff, temp_last = 0;
+    uint8_t temp = 0xff;
+    uint8_t temp_last = 0;
     bool is_header = false;
+
     if (Serial.available()) {
         temp = Serial.read();
         switch (temp) {
@@ -123,14 +128,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_160x120);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_160x120 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_176x144);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV2640_160x120 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_320x240);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_320x240 END"));
 #endif
             temp = 0xff;
             break;
@@ -139,14 +136,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_176x144);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_176x144 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_320x240);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_320x240 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_640x480);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_640x480 END"));
 #endif
             temp = 0xff;
             break;
@@ -155,14 +144,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_320x240);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_320x240 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_352x288);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_352x288 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_1024x768);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_1024x768 END"));
 #endif
             temp = 0xff;
             break;
@@ -172,14 +153,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_352x288);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_352x288 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_640x480);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_640x480 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_1280x960);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_1280x960 END"));
 #endif
             break;
         case 4:
@@ -188,14 +161,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_640x480);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_640x480 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_800x600);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_800x600 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_1600x1200);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_1600x1200 END"));
 #endif
             break;
         case 5:
@@ -204,14 +169,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_800x600);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_800x600 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_1024x768);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_1024x768 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_2048x1536);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_2048x1536 END"));
 #endif
             break;
         case 6:
@@ -220,14 +177,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_1024x768);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_1024x768 END"));
-#elif defined(OV3640_MINI_3MP)
-            myCAM.OV3640_set_JPEG_size(OV3640_1280x960);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_1280x960 END"));
-#else
-            myCAM.OV5642_set_JPEG_size(OV5642_2592x1944);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV5642_2592x1944 END"));
 #endif
             break;
         case 7:
@@ -236,10 +185,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_1280x1024);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_1280x1024 END"));
-#else
-            myCAM.OV3640_set_JPEG_size(OV3640_1600x1200);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_1600x1200 END"));
 #endif
             break;
         case 8:
@@ -248,10 +193,6 @@ void loop()
             myCAM.OV2640_set_JPEG_size(OV2640_1600x1200);
             delay(1000);
             Serial.println(F("ACK CMD switch to OV2640_1600x1200 END"));
-#else
-            myCAM.OV3640_set_JPEG_size(OV3640_2048x1536);
-            delay(1000);
-            Serial.println(F("ACK CMD switch to OV3640_2048x1536 END"));
 #endif
             break;
         case 0x10:
