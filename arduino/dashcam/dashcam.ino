@@ -50,6 +50,9 @@ uint8_t read_fifo_burst(ArduCAM myCAM);
 
 void setup()
 {
+    // debug
+    pinMode(LED_BUILTIN, OUTPUT);
+
     // put your setup code here, to run once:
     uint8_t vid;
     uint8_t pid;
@@ -60,7 +63,7 @@ void setup()
     Serial.begin(230400);
     // bluetooth works on 230400 but not on 460800
 
-    Serial.println(F("ACK CMD ArduCAM Start! END"));
+    //Serial.println(F("ACK CMD ArduCAM Start! END"));
     // set the g_CS as an output:
     pinMode(g_CS, OUTPUT);
     digitalWrite(g_CS, HIGH);
@@ -77,12 +80,12 @@ void setup()
         myCAM.write_reg(ARDUCHIP_TEST1, 0x55);
         temp = myCAM.read_reg(ARDUCHIP_TEST1);
         if (temp != 0x55) {
-            Serial.println(F("ACK CMD SPI interface Error! END"));
+            //Serial.println(F("ACK CMD SPI interface Error! END"));
             delay(1000);
             continue;
         }
         else {
-            Serial.println(F("ACK CMD SPI interface OK. END"));
+            //Serial.println(F("ACK CMD SPI interface OK. END"));
             break;
         }
     }
@@ -99,7 +102,7 @@ void setup()
             continue;
         }
         else {
-            Serial.println(F("ACK CMD OV2640 detected. END"));
+            //Serial.println(F("ACK CMD OV2640 detected. END"));
             break;
         }
     }
@@ -129,13 +132,13 @@ void loop()
             g_mode = 1;
             temp = 0xff;
             start_capture = 1;
-            Serial.println(F("JPG snap"));
+            //Serial.println(F("JPG snap"));
             break;
         case 0x62: // 'b'
             g_mode = 3;
             temp = 0xff;
             start_capture = 3;
-            Serial.println(F("BMP snap stub"));
+            //Serial.println(F("BMP snap stub"));
             break;
         default:
             break;
@@ -151,13 +154,19 @@ void loop()
             start_capture = 0;
         }
         if (myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
-            Serial.println(F("ACK CMD CAM Capture Done. END"));
+            //Serial.println(F("ACK CMD CAM Capture Done. END"));
             delay(50);
             read_fifo_burst(myCAM);
             // Clear the capture done flag
             myCAM.clear_fifo_flag();
+            //g_mode = 0;
         }
     }
+    /*
+    else if (g_mode == 0) {
+        Serial.end();
+    }
+    */
 /*
     uint8_t temp = 0xff;
     uint8_t temp_last = 0;
@@ -411,15 +420,15 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
     uint8_t temp_last = 0;
     uint32_t length = myCAM.read_fifo_length();
 
-    Serial.println(length, DEC);
+    //Serial.println(length, DEC);
     if (length >= MAX_FIFO_SIZE) // 512 kb
     {
-        Serial.println(F("ACK CMD Over size. END"));
+        //Serial.println(F("ACK CMD Over size. END"));
         return 0;
     }
     if (length == 0) // 0 kb
     {
-        Serial.println(F("ACK CMD Size is 0. END"));
+        //Serial.println(F("ACK CMD Size is 0. END"));
         return 0;
     }
 
@@ -428,6 +437,8 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
     temp = SPI.transfer(0x00);
     length--;
     while (length--) {
+        digitalWrite(LED_BUILTIN, HIGH);
+
         temp_last = temp;
         temp = SPI.transfer(0x00);
         if (is_header == true) {
@@ -435,7 +446,7 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
         }
         else if ((temp == 0xD8) & (temp_last == 0xFF)) {
             is_header = true;
-            Serial.println(F("ACK CMD IMG END"));
+            //Serial.println(F("ACK CMD IMG END"));
             Serial.write(temp_last);
             Serial.write(temp);
         }
@@ -443,6 +454,8 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
         if ((temp == 0xD9) && (temp_last == 0xFF)) // If find the end ,break while,
             break;
         delayMicroseconds(15);
+
+        digitalWrite(LED_BUILTIN, LOW);
     }
 
     myCAM.CS_HIGH();
