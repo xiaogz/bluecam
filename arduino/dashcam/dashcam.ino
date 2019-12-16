@@ -56,9 +56,9 @@ void setup()
     uint8_t temp;
 
     Wire.begin();
-    Serial.begin(921600);
-    // reduce this rate and see if bluetooth module works
-    //Serial.begin(115200);
+    // TODO: increase this rate and see if bluetooth module works
+    Serial.begin(230400);
+    // bluetooth works on 230400 but not on 460800
 
     Serial.println(F("ACK CMD ArduCAM Start! END"));
     // set the g_CS as an output:
@@ -116,6 +116,49 @@ void setup()
 
 void loop()
 {
+    delay(1000);
+    //Serial.println(F("ABCD"));
+    uint8_t temp = 0xff;
+    uint8_t temp_last = 0;
+    bool is_header = false;
+
+    if (Serial.available()) {
+        temp = Serial.read();
+        switch (temp) {
+        case 0x61: // 'a'
+            g_mode = 1;
+            temp = 0xff;
+            start_capture = 1;
+            Serial.println(F("JPG snap"));
+            break;
+        case 0x62: // 'b'
+            g_mode = 3;
+            temp = 0xff;
+            start_capture = 3;
+            Serial.println(F("BMP snap stub"));
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (g_mode == 1) {
+        if (start_capture == 1) {
+            myCAM.flush_fifo();
+            myCAM.clear_fifo_flag();
+            // Start capture
+            myCAM.start_capture();
+            start_capture = 0;
+        }
+        if (myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+            Serial.println(F("ACK CMD CAM Capture Done. END"));
+            delay(50);
+            read_fifo_burst(myCAM);
+            // Clear the capture done flag
+            myCAM.clear_fifo_flag();
+        }
+    }
+/*
     uint8_t temp = 0xff;
     uint8_t temp_last = 0;
     bool is_header = false;
@@ -224,6 +267,12 @@ void loop()
             temp = 0xff;
             myCAM.set_format(BMP);
             myCAM.InitCAM();
+            break;
+        case 0x30:
+            g_mode = 3;
+            temp = 0xff;
+            start_capture = 3;
+            Serial.println(F("ACK CMD CAM start single shoot. END"));
             break;
         default:
             break;
@@ -350,8 +399,10 @@ void loop()
             myCAM.CS_HIGH();
             // Clear the capture done flag
             myCAM.clear_fifo_flag();
+            g_mode = 0; // clears mode flag
         }
     }
+*/
 }
 
 uint8_t read_fifo_burst(ArduCAM myCAM)

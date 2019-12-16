@@ -21,7 +21,7 @@ void setup()
 
     // HC-05 default serial speed for communcation mode is 9600
     BTSerial.begin(38400);
-    // TODO: verify that the AT mode baudrate either stays at 38400 or becomes whatever baudrate is configured
+    // the AT mode baudrate stays at 38400 no matter how the HC05 is configured
 }
 
 void loop()

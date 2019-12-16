@@ -42,9 +42,35 @@
 
 - IMPORTANT: Arduino's USB communicates on UART serial protocol; if any module is sending data using port 0/1 then uploading sketches can fail
 
+- IMPORTANT: use F() macros for Arduino debug statements
+
 - actually ArduCAM has their own Github repo with a working bluetooth + camera arduino project
     - the working bluetooth camera project is for 2MP mini and not for 2MP mini plus; I have to ensure there's nothing breaking the code and/or circuits
         - so far, in arduino/libraries/ArduCAM/ArduCAM.h, we see that the mini has smaller frame buffer (384kb) compared to the mini plus (8Mb)
+
+- USB connection to Android phone also counts as one of the /dev/ttyACM ports; don't get confused by Arduino upload not working
+
+- actually we might just pivot and make the server on laptop; Android bluetooth serial ports cannot increase its baud rate beyond the default 115200 (see https://stackoverflow.com/a/23888958)
+    - actually seems like the limit is just 115200... even opening bluetooth serial port on linux terminal and configuring the baud rate beyond 115200 we get garbage :(
+    - then there's no point using desktop linux because both linux and Android phone will hit the 115200 data tranfer limit
+TODO:   - the relationship between voltage divider resistor values and baud rate should be looked into but there's no time now
+TODO:   - look into if breadboard's circuitry could affect baud rate; no time now
+    - actually, the max limit is 230400 baud rate; not the best but I'll take what I can get
+
+- there's a really helpful askubuntu post on working with bluetooth and opening serial ports (https://askubuntu.com/a/869951)
+
+- Android programming might take a long time... I'll look into JPEG compression for now
+
+** in the end, we are always communicating over serial port, whether it's implemented over bluetooth or USB changes little about the image analysis part
+    - Android app + NDK is not looking good with given amount of time...
+
+- debugging checklist:
+    * did the Arduino IDE select the proper port? Between reconnects it could jump from ACM1 to ACM2; Restart the IDE if it cannot see the port but terminal can via "ls /dev/ttyACM*"
+    * are all the cables connected properly? If you're on bluetooth-programming vs dashcam, there's different connectivities
+        * also, if you're using the serial port for bluetooth transmissions to server, you can't upload via USB
+    * is the uploaded Arduino sketch the one you wanted?
+    * are the baud rates setup properly?
+    * is the Android source code proper?
 
 - TODO: for Android app: use the bluetooth skeleton and add another activity that will take from a sample opencl app
 
