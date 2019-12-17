@@ -11,6 +11,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "utility.hpp"
+
 // we are working with JPEG 320×240
 static constexpr const size_t k1KB = 1024;
 static constexpr size_t kJpgBufferSize = 512 * k1KB;
@@ -55,6 +57,56 @@ int set_interface_attribs(int serialPort, int speed)
         return -1;
     }
     return 0;
+}
+
+bool DecompressJpegImage(const uint8_t * imageData, const uint32_t dataSize)
+{
+    bool retval = true;
+
+    struct jpeg_decompress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+    jpeg_mem_src(&cinfo, imageData, dataSize);
+
+	if (jpeg_read_header(&cinfo, TRUE) != 1) {
+        retval = false;
+    }
+
+    if (retval) {
+        jpeg_start_decompress(&cinfo);
+
+        const uint32_t width = cinfo.output_width;
+        const uint32_t height = cinfo.output_height;
+        const uint32_t colorBitFactor = cinfo.output_components;
+        const uint32_t rowStride = width * colorBitFactor;
+
+        printf("Image is %u by %u with %u components\n", width, height, colorBitFactor);
+
+        uint64_t rawImageSize = width * height * colorBitFactor;
+
+        auto rawImage = std::make_unique<uint8_t[]>(rawImageSize);
+
+        uint8_t * bufferArray[1];
+        while (cinfo.output_scanline < cinfo.output_height) {
+            bufferArray[0] = rawImage.get() + cinfo.output_scanline * rowStride;
+            jpeg_read_scanlines(&cinfo, bufferArray, 1);
+        }
+
+        jpeg_finish_decompress(&cinfo);
+
+        printf("jpeg decompression finished\n");
+
+        if (!Util::WritePPMImageToFile(
+                "output.ppm", rawImage.get(), width, height, colorBitFactor)) {
+            retval = false;
+        }
+    }
+
+    jpeg_destroy_decompress(&cinfo);
+
+    return retval;
 }
 
 //void set_mincount(int serialPort, int mcount)
@@ -117,14 +169,6 @@ int main(int argc, char ** argv)
             // dst src size
             ::memcpy(&jpgBuffer[totalBytesReceived], serialBuffer, bytesRead);
 
-            /*
-            unsigned char * p;
-            printf("Read %d:", bytesRead);
-            for (p = serialBuffer; bytesRead-- > 0; p++)
-                printf(" 0x%x", *p);
-            printf("\n");
-            */
-
             totalBytesReceived += bytesRead;
         }
         else if (bytesRead < 0) {
@@ -142,6 +186,10 @@ int main(int argc, char ** argv)
     };
 
     printf("totalBytesReceived = %lu\n", totalBytesReceived);
+
+    if (!DecompressJpegImage(jpgBuffer.get(), totalBytesReceived)) {
+        printf("failed to extract image from jpeg data\n");
+    }
 
     if (close(serialPort) != 0) {
         printf("close() failed with %d: %s\n", errno, strerror(errno));

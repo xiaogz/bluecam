@@ -14,6 +14,7 @@ set(SRCS
     "videoserver.cpp"
     "serialcomm.cpp"
     "imageproc.cpp"
+    "utility.cpp"
 )
 
 include_directories(

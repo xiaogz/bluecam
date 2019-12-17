@@ -72,8 +72,6 @@ TODO:   - look into if breadboard's circuitry could affect baud rate; no time no
     * are the baud rates setup properly?
     * is the Android source code proper?
 
-- TODO: for Android app: use the bluetooth skeleton and add another activity that will take from a sample opencl app
-
 - TODO: think of how to validate the performance of our project
     - how many frames per second can the dashcam send over bluetooth? try different resolutions?
     - how much time would our app take to process each image?
