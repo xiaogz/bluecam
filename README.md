@@ -1,3 +1,8 @@
+Build
+-----
+1. `sudo apt install libjpeg-turbo8-dev`; somehow, `sudo apt install
+   libjpeg-dev` only installs documentation and a copyright text...?
+
 Goal
 ----
 - challenge myself technically

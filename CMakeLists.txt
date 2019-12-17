@@ -4,7 +4,11 @@ project(VideoServer CXX)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14 -Wall -Weffc++ -Wextra")
 
-find_package(jpeg REQUIRED)
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}")
+
+find_package(JPEG
+    REQUIRED
+)
 
 set(SRCS
     "videoserver.cpp"
@@ -13,14 +17,15 @@ set(SRCS
 )
 
 include_directories(
+    "${JPEG_INCLUDE_DIR}"
     "${PROJECT_SOURCE_DIR}"
-)
-
-target_link_libraries(videoserver
-    libjpeg
 )
 
 add_executable(videoserver
     ${SRCS}
+)
+
+target_link_libraries(videoserver
+    jpeg
 )
 
