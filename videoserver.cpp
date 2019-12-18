@@ -8,18 +8,24 @@
 #include <fcntl.h>
 #include <jpeglib.h>
 #include <memory>
+#include <SDL2/SDL.h>
 #include <termios.h>
 #include <unistd.h>
 
 #include "utility.hpp"
 
-// we are working with JPEG 320×240
+using UPtrBytes = std::unique_ptr<uint8_t[]>;
+
+// we are receiving JPEG image
 static constexpr const size_t k1KB = 1024;
 static constexpr size_t kJpgBufferSize = 512 * k1KB;
-static constexpr size_t kRawImgBufferSize = 2 * 1024 * k1KB;
 static constexpr size_t kCommandLength = 3; // letter + \r\n
-static constexpr size_t kMaxTimeoutCount = 7;
+static constexpr size_t kMaxTimeoutCount = 4;
 static constexpr size_t kSerialBufferSize = 100;
+static constexpr size_t kVideoWidth = 320;
+static constexpr size_t kVideoHeight = 240;
+
+//static int g_serialPort = -1;
 
 int set_interface_attribs(int serialPort, int speed)
 {
@@ -59,54 +65,49 @@ int set_interface_attribs(int serialPort, int speed)
     return 0;
 }
 
-bool DecompressJpegImage(const uint8_t * imageData, const uint32_t dataSize)
+// TODO: proper error handling
+UPtrBytes DecompressJpegImage(
+    const uint8_t * inputImage,
+    const uint32_t dataSize)
 {
-    bool retval = true;
-
-    struct jpeg_decompress_struct cinfo;
+    struct jpeg_decompress_struct dinfo;
 	struct jpeg_error_mgr jerr;
 
-    cinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_decompress(&cinfo);
-    jpeg_mem_src(&cinfo, imageData, dataSize);
+    dinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&dinfo);
+    jpeg_mem_src(&dinfo, inputImage, dataSize);
 
-	if (jpeg_read_header(&cinfo, TRUE) != 1) {
-        retval = false;
+    if (jpeg_read_header(&dinfo, TRUE) != JPEG_HEADER_OK) {
+        jpeg_destroy_decompress(&dinfo);
+        return UPtrBytes{nullptr};
     }
 
-    if (retval) {
-        jpeg_start_decompress(&cinfo);
+    jpeg_start_decompress(&dinfo);
 
-        const uint32_t width = cinfo.output_width;
-        const uint32_t height = cinfo.output_height;
-        const uint32_t colorBitFactor = cinfo.output_components;
-        const uint32_t rowStride = width * colorBitFactor;
+    const uint32_t width = dinfo.output_width;
+    const uint32_t height = dinfo.output_height;
+    const uint32_t colorBitFactor = dinfo.output_components;
+    const uint32_t rowStride = width * colorBitFactor;
 
-        printf("Image is %u by %u with %u components\n", width, height, colorBitFactor);
+    printf("Image is %u by %u with %u components\n", width, height, colorBitFactor);
 
-        uint64_t rawImageSize = width * height * colorBitFactor;
+    uint64_t rawImageSize = width * height * colorBitFactor;
 
-        auto rawImage = std::make_unique<uint8_t[]>(rawImageSize);
+    UPtrBytes rawImage = std::make_unique<uint8_t[]>(rawImageSize);
 
-        uint8_t * bufferArray[1];
-        while (cinfo.output_scanline < cinfo.output_height) {
-            bufferArray[0] = rawImage.get() + cinfo.output_scanline * rowStride;
-            jpeg_read_scanlines(&cinfo, bufferArray, 1);
-        }
-
-        jpeg_finish_decompress(&cinfo);
-
-        printf("jpeg decompression finished\n");
-
-        if (!Util::WritePPMImageToFile(
-                "output.ppm", rawImage.get(), width, height, colorBitFactor)) {
-            retval = false;
-        }
+    uint8_t * bufferArray[1];
+    while (dinfo.output_scanline < dinfo.output_height) {
+        bufferArray[0] = rawImage.get() + dinfo.output_scanline * rowStride;
+        jpeg_read_scanlines(&dinfo, bufferArray, 1);
     }
 
-    jpeg_destroy_decompress(&cinfo);
+    jpeg_finish_decompress(&dinfo);
 
-    return retval;
+    printf("jpeg decompression finished\n");
+
+    jpeg_destroy_decompress(&dinfo);
+
+    return std::move(rawImage);
 }
 
 //void set_mincount(int serialPort, int mcount)
@@ -125,11 +126,31 @@ bool DecompressJpegImage(const uint8_t * imageData, const uint32_t dataSize)
 //        printf("Error tcsetattr: %s\n", strerror(errno));
 //}
 
+/*
+ * TODO
+bool initialize(const char * portname)
+{
+    g_serialPort = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+
+    if (g_serialPort < 0) {
+        printf("Error opening %s: %s\n", portname, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+void cleanup()
+{
+    if (g_serialPort != -1 && close(g_serialPort) != 0) {
+        printf("close() failed with %d: %s\n", errno, strerror(errno));
+    }
+}
+*/
+
 int main(int argc, char ** argv)
 {
     const char * portname = "/dev/ttyACM0";
-
-    int wlen;
 
     const int serialPort = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
     if (serialPort < 0) {
@@ -140,21 +161,13 @@ int main(int argc, char ** argv)
     set_interface_attribs(serialPort, B230400);
     // set_mincount(serialPort, 0);                /* set to pure timed read */
 
-    /* simple output */
-    wlen = write(serialPort, "a\r\n", kCommandLength);
+    const int wlen = write(serialPort, "a\r\n", kCommandLength);
     if (wlen != kCommandLength) {
         printf("Error from write: %d, %d\n", wlen, errno);
     }
     ::tcdrain(serialPort); /* delay for output */
 
     auto jpgBuffer = std::make_unique<uint8_t[]>(kJpgBufferSize);
-
-    /*
-    auto jpgBuffer = std::make_unique<uint8_t[]>(kJpgBufferSize);
-
-    uint8_t * temp = jpgBuffer.get();
-
-    */
 
     /* simple noncanonical input */
     uint64_t totalBytesReceived = 0;
@@ -170,6 +183,7 @@ int main(int argc, char ** argv)
             ::memcpy(&jpgBuffer[totalBytesReceived], serialBuffer, bytesRead);
 
             totalBytesReceived += bytesRead;
+            printf("read %lu bytes\n", bytesRead);
         }
         else if (bytesRead < 0) {
             printf("Error from read: %d: %s\n", bytesRead, strerror(errno));
@@ -187,7 +201,14 @@ int main(int argc, char ** argv)
 
     printf("totalBytesReceived = %lu\n", totalBytesReceived);
 
-    if (!DecompressJpegImage(jpgBuffer.get(), totalBytesReceived)) {
+    UPtrBytes rawImage = DecompressJpegImage(jpgBuffer.get(), totalBytesReceived);
+
+    if (rawImage.get() != nullptr) {
+        if (!Util::WritePPMImageToFile(
+                "output.ppm", rawImage.get(), kVideoWidth, kVideoHeight, 3)) {
+        }
+    }
+    else {
         printf("failed to extract image from jpeg data\n");
     }
 

@@ -119,7 +119,7 @@ void setup()
 
 void loop()
 {
-    delay(1000);
+    //delay(1000);
     //Serial.println(F("ABCD"));
     uint8_t temp = 0xff;
     uint8_t temp_last = 0;
@@ -453,7 +453,8 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
 
         if ((temp == 0xD9) && (temp_last == 0xFF)) // If find the end ,break while,
             break;
-        delayMicroseconds(15);
+        //delayMicroseconds(15);
+        delayMicroseconds(5);
 
         digitalWrite(LED_BUILTIN, LOW);
     }
