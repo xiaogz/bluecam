@@ -72,6 +72,19 @@ TODO:   - look into if breadboard's circuitry could affect baud rate; no time no
     * are the baud rates setup properly?
     * is the Android source code proper?
 
+- TODO: create a minimal GUI to at least render the received & processed images
+    - first thought was Qt but it seemed really heavyweight
+    - then thought of SDL because of a SO post but the boilerplate seems too much 
+    - then remembered imgui used in graphics programming course but it requires setting up OpenGL; I just want a simple window that updates with new images
+    - imgui mentioned it's "immediate mode gui" so I looked that up and came across Immediate-Mode-UI/Nuklear which seems to be what I need
+    - nuklear has good documentation and you only compile what you need :D https://cdn.statically.io/gh/Immediate-Mode-UI/nuklear/master/doc/nuklear.html#nuklear/usage
+    - hmm seems like nuklear is an abstraction of draw commands and it still needs platform-specific renderer like X11, GDI, OpenGL, or Vulkan
+    - I don't care about GUI portability right now; I think SDL2 works; the most pressing resource is time
+        - https://trenki2.github.io/blog/2017/06/02/using-sdl2-with-cmake/ for CMake setup
+        - http://lazyfoo.net/SDL_tutorials/lesson01/index2.php for tutorial
+
+- due to time constraints I'll just hardcode default resolution to 320 x 240
+
 - TODO: think of how to validate the performance of our project
     - how many frames per second can the dashcam send over bluetooth? try different resolutions?
     - how much time would our app take to process each image?

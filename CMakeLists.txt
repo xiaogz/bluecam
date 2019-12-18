@@ -10,6 +10,8 @@ find_package(JPEG
     REQUIRED
 )
 
+find_package(SDL2 REQUIRED)
+
 set(SRCS
     "videoserver.cpp"
     "serialcomm.cpp"
@@ -18,6 +20,7 @@ set(SRCS
 )
 
 include_directories(
+    "${SDL2_INCLUDE_DIRS}"
     "${JPEG_INCLUDE_DIR}"
     "${PROJECT_SOURCE_DIR}"
 )
@@ -27,6 +30,7 @@ add_executable(videoserver
 )
 
 target_link_libraries(videoserver
+    SDL2
     jpeg
 )
 
