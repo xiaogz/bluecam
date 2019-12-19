@@ -40,7 +40,6 @@ const unsigned char bmp_header[BMPIMAGEOFFSET] PROGMEM = {
 };
 // set pin 7 as the slave select for the digital port:
 const int g_CS = 7;
-bool is_header = false;
 static int g_mode = 0;
 uint8_t start_capture = 0;
 #if defined(OV2640_MINI_2MP_PLUS)
@@ -60,8 +59,12 @@ void setup()
 
     Wire.begin();
     // TODO: increase this rate and see if bluetooth module works
+    //Serial.begin(460800);
     Serial.begin(230400);
-    // bluetooth works on 230400 but not on 460800
+    //Serial.begin(115200);
+    // it's confirmed that bluetooth works on 230400 but not on 460800
+    // TODO: see if changing the resistors on the voltage divider would allow
+    // higher baud rate to work
 
     //Serial.println(F("ACK CMD ArduCAM Start! END"));
     // set the g_CS as an output:
@@ -121,9 +124,11 @@ void loop()
 {
     //delay(1000);
     //Serial.println(F("ABCD"));
+    // these are used for video streaming mode only and duplicates code of
+    // read_fifo_burst()
     uint8_t temp = 0xff;
     uint8_t temp_last = 0;
-    bool is_header = false;
+    bool hasEncounteredJPEGHeader = false;
 
     if (Serial.available()) {
         temp = Serial.read();
@@ -134,11 +139,11 @@ void loop()
             start_capture = 1;
             //Serial.println(F("JPG snap"));
             break;
-        case 0x62: // 'b'
-            g_mode = 3;
+        case 0x72: // 'r'
+            g_mode = 2;
             temp = 0xff;
-            start_capture = 3;
-            //Serial.println(F("BMP snap stub"));
+            start_capture = 2;
+            //Serial.println(F("ACK CMD CAM start video streaming. END"));
             break;
         default:
             break;
@@ -162,6 +167,63 @@ void loop()
             //g_mode = 0;
         }
     }
+    else if (g_mode == 2) { // video streaming loop
+        while (1) {
+            // check for user-issued stop command
+            temp = Serial.read();
+            if (temp == 0x78) { // 'x'
+                start_capture = 0;
+                g_mode = 0;
+                //Serial.println(F("ACK CMD CAM stop video streaming. END"));
+                break;
+            }
+
+            // Start capture
+            if (start_capture == 2) {
+                myCAM.flush_fifo();
+                myCAM.clear_fifo_flag();
+                myCAM.start_capture();
+                start_capture = 0;
+            }
+            if (myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK)) {
+                uint32_t length = 0;
+                length = myCAM.read_fifo_length();
+                if ((length >= MAX_FIFO_SIZE) | (length == 0)) {
+                    myCAM.clear_fifo_flag();
+                    start_capture = 2;
+                    continue;
+                }
+                myCAM.CS_LOW();
+                myCAM.set_fifo_burst(); // Set fifo burst g_mode
+                temp = SPI.transfer(0x00);
+                length--;
+                while (length--) {
+                    temp_last = temp;
+                    temp = SPI.transfer(0x00);
+                    if (hasEncounteredJPEGHeader == true) {
+                        Serial.write(temp);
+                    }
+                    else if ((temp == 0xD8) & (temp_last == 0xFF)) {
+                        hasEncounteredJPEGHeader = true;
+                        //Serial.println(F("ACK CMD IMG END"));
+                        Serial.write(temp_last);
+                        Serial.write(temp);
+                    }
+                    if ((temp == 0xD9) && (temp_last == 0xFF)) {
+                        Serial.write(temp_last);
+                        Serial.write(temp);
+                        break;
+                    }
+                    delayMicroseconds(15);
+                }
+                myCAM.CS_HIGH();
+                myCAM.clear_fifo_flag();
+                start_capture = 2;
+                hasEncounteredJPEGHeader = false;
+            }
+        }
+    }
+
     /*
     else if (g_mode == 0) {
         Serial.end();
@@ -170,7 +232,7 @@ void loop()
 /*
     uint8_t temp = 0xff;
     uint8_t temp_last = 0;
-    bool is_header = false;
+    bool hasEncounteredJPEGHeader = false;
 
     if (Serial.available()) {
         temp = Serial.read();
@@ -335,11 +397,11 @@ void loop()
                 while (length--) {
                     temp_last = temp;
                     temp = SPI.transfer(0x00);
-                    if (is_header == true) {
+                    if (hasEncounteredJPEGHeader == true) {
                         Serial.write(temp);
                     }
                     else if ((temp == 0xD8) & (temp_last == 0xFF)) {
-                        is_header = true;
+                        hasEncounteredJPEGHeader = true;
                         Serial.println(F("ACK CMD IMG END"));
                         Serial.write(temp_last);
                         Serial.write(temp);
@@ -351,7 +413,7 @@ void loop()
                 myCAM.CS_HIGH();
                 myCAM.clear_fifo_flag();
                 start_capture = 2;
-                is_header = false;
+                hasEncounteredJPEGHeader = false;
             }
         }
     }
@@ -414,8 +476,10 @@ void loop()
 */
 }
 
+// this function is only called for single-capture mode
 uint8_t read_fifo_burst(ArduCAM myCAM)
 {
+    bool hasEncounteredJPEGHeader = false;
     uint8_t temp = 0;
     uint8_t temp_last = 0;
     uint32_t length = myCAM.read_fifo_length();
@@ -437,15 +501,15 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
     temp = SPI.transfer(0x00);
     length--;
     while (length--) {
-        digitalWrite(LED_BUILTIN, HIGH);
+        //digitalWrite(LED_BUILTIN, HIGH);
 
         temp_last = temp;
         temp = SPI.transfer(0x00);
-        if (is_header == true) {
+        if (hasEncounteredJPEGHeader == true) {
             Serial.write(temp);
         }
         else if ((temp == 0xD8) & (temp_last == 0xFF)) {
-            is_header = true;
+            hasEncounteredJPEGHeader = true;
             //Serial.println(F("ACK CMD IMG END"));
             Serial.write(temp_last);
             Serial.write(temp);
@@ -453,13 +517,12 @@ uint8_t read_fifo_burst(ArduCAM myCAM)
 
         if ((temp == 0xD9) && (temp_last == 0xFF)) // If find the end ,break while,
             break;
-        //delayMicroseconds(15);
-        delayMicroseconds(5);
+        delayMicroseconds(15);
 
-        digitalWrite(LED_BUILTIN, LOW);
+        //digitalWrite(LED_BUILTIN, LOW);
     }
 
     myCAM.CS_HIGH();
-    is_header = false;
+    hasEncounteredJPEGHeader = false;
     return 1;
 }
