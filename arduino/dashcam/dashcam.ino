@@ -196,7 +196,7 @@ void loop()
                 myCAM.CS_LOW();
                 myCAM.set_fifo_burst(); // Set fifo burst g_mode
                 temp = SPI.transfer(0x00);
-                length--;
+                --length;
                 while (length--) {
                     temp_last = temp;
                     temp = SPI.transfer(0x00);
@@ -210,8 +210,6 @@ void loop()
                         Serial.write(temp);
                     }
                     if ((temp == 0xD9) && (temp_last == 0xFF)) {
-                        Serial.write(temp_last);
-                        Serial.write(temp);
                         break;
                     }
                     delayMicroseconds(15);

@@ -12,20 +12,26 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "serialcomm.hpp"
 #include "utility.hpp"
 
 using UPtrBytes = std::unique_ptr<uint8_t[]>;
 
 // we are receiving JPEG image
 static constexpr const size_t k1KB = 1024;
-static constexpr size_t kJpgBufferSize = 512 * k1KB;
-static constexpr size_t kCommandLength = 3; // letter + \r\n
-static constexpr size_t kMaxTimeoutCount = 4;
+static constexpr size_t kJpgBufferSize = 128 * k1KB;
+static constexpr size_t kMaxTimeoutCount = 20;
 static constexpr size_t kSerialBufferSize = 100;
 static constexpr size_t kVideoWidth = 320;
 static constexpr size_t kVideoHeight = 240;
 
 //static int g_serialPort = -1;
+
+enum class ParserState : uint32_t
+{
+    SeekStart,
+    SeekEnd,
+};
 
 int set_interface_attribs(int serialPort, int speed)
 {
@@ -56,7 +62,7 @@ int set_interface_attribs(int serialPort, int speed)
     // see https://stackoverflow.com/a/38714644 and
     // https://stackoverflow.com/a/11513102 for why program will hang if VMIN is set to 1
     tty.c_cc[VMIN] = 0;
-    tty.c_cc[VTIME] = 5;
+    tty.c_cc[VTIME] = 2;
 
     if (::tcsetattr(serialPort, TCSANOW, &tty) != 0) {
         printf("Error from tcsetattr: %s\n", ::strerror(errno));
@@ -151,47 +157,90 @@ void cleanup()
 int main(int argc, char ** argv)
 {
     const char * portname = "/dev/ttyACM0";
+    //const char * portname = "/dev/rfcomm0";
 
-    const int serialPort = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+    printf("before opening\n");
+    int serialPort = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
     if (serialPort < 0) {
         printf("Error opening %s: %s\n", portname, strerror(errno));
         return -1;
     }
     /*baudrate 230400, 8 bits, no parity, 1 stop bit */
-    set_interface_attribs(serialPort, B230400);
+    //set_interface_attribs(serialPort, B460800);
+    // HC05 says 460800 baud rate is possible but I couldn't get it to work
+    int retval = set_interface_attribs(serialPort, B230400);
+    //int retval = set_interface_attribs(serialPort, B921600);
+    //set_interface_attribs(serialPort, B115200);
     // set_mincount(serialPort, 0);                /* set to pure timed read */
-
-    const int wlen = write(serialPort, "a\r\n", kCommandLength);
-    if (wlen != kCommandLength) {
-        printf("Error from write: %d, %d\n", wlen, errno);
+    if (retval != 0) {
+        printf("failed to set baud rate\n");
     }
-    ::tcdrain(serialPort); /* delay for output */
 
+    // we alternate containers so that data stream is buffered in 1 container
+    // while jpeg data is processed in another one
     auto jpgBuffer = std::make_unique<uint8_t[]>(kJpgBufferSize);
+    auto jpgBuffer2 = std::make_unique<uint8_t[]>(kJpgBufferSize);
 
-    /* simple noncanonical input */
     uint64_t totalBytesReceived = 0;
+    uint64_t jpegFrameSize;
     uint32_t timeoutCounter = 0;
     int32_t bytesRead;
 
-    while (1) {
-        uint8_t serialBuffer[kSerialBufferSize];
+    uint8_t serialBuffer[kSerialBufferSize];
+    uint32_t serialBufferDelimiter = 0; // TODO: use this
+    uint32_t capturedFrames = 0;
 
-        bytesRead = read(serialPort, serialBuffer, sizeof(serialBuffer) - 1);
+    printf("before first write\n");
+    const char * cmd = "r";
+    int wlen = write(serialPort, cmd, ::strlen(cmd));
+    if (wlen != ::strlen(cmd)) {
+        printf("Error from write: %d, %d\n", wlen, errno);
+    }
+    //::tcdrain(serialPort); /* delay for output */
+
+    /* simple noncanonical input */
+    while (1) {
+        bytesRead = read(
+            serialPort,
+            //&serialBuffer[serialBufferDelimiter],
+            serialBuffer,
+            sizeof(serialBuffer) - 1);
+
+        //printf("read %d bytes\n", bytesRead);
+
         if (bytesRead > 0) {
-            // dst src size
             ::memcpy(&jpgBuffer[totalBytesReceived], serialBuffer, bytesRead);
 
             totalBytesReceived += bytesRead;
-            printf("read %lu bytes\n", bytesRead);
+
+            //printf("got %lu bytes in total\n", totalBytesReceived);
+
+            // TODO: confirm that the marker is always there
+            if (totalBytesReceived > 4) {
+                // there should be at least a SOI and a EOI marker
+                if (serialBuffer[bytesRead - 2] == 0xff &&
+                    serialBuffer[bytesRead - 1] == 0xd9)
+                {
+                    jpegFrameSize = totalBytesReceived;
+                    printf("jpeg frame has %lu bytes.\n", jpegFrameSize);
+                    totalBytesReceived = 0;
+                    capturedFrames += 1;
+                    if (capturedFrames > 10) {
+                        break;
+                    }
+                    continue;
+                }
+            }
+
+            //timeoutCounter = 0;
         }
         else if (bytesRead < 0) {
             printf("Error from read: %d: %s\n", bytesRead, strerror(errno));
             break;
         }
         else { /* bytesRead == 0 */
-            printf("Timeout from read\n");
             if (timeoutCounter > kMaxTimeoutCount) {
+                printf("Timeout from read\n");
                 break;
             }
             ++timeoutCounter;
@@ -199,9 +248,20 @@ int main(int argc, char ** argv)
         /* we repeat read to get full message */
     };
 
-    printf("totalBytesReceived = %lu\n", totalBytesReceived);
+    printf("captured %u frames\n", capturedFrames);
 
-    UPtrBytes rawImage = DecompressJpegImage(jpgBuffer.get(), totalBytesReceived);
+    const char * cmd2 = "x";
+    wlen = write(serialPort, cmd2, ::strlen(cmd2));
+    if (wlen != ::strlen(cmd2)) {
+        printf("Error from write: %d, %d\n", wlen, errno);
+    }
+    ::tcdrain(serialPort); /* delay for output */
+
+    //printf("totalBytesReceived = %lu\n", totalBytesReceived);
+
+    // TODO: have image processing in another thread
+    /*
+    UPtrBytes rawImage = DecompressJpegImage(jpgBuffer.get(), jpegFrameSize);
 
     if (rawImage.get() != nullptr) {
         if (!Util::WritePPMImageToFile(
@@ -211,6 +271,7 @@ int main(int argc, char ** argv)
     else {
         printf("failed to extract image from jpeg data\n");
     }
+    */
 
     if (close(serialPort) != 0) {
         printf("close() failed with %d: %s\n", errno, strerror(errno));
