@@ -15,8 +15,20 @@
  *                                                                              *
  ********************************************************************************/
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+// time is measured in micro-seconds
+static const uint64_t kInterval = 33300000;
+
+uint64_t GetTime()
+{
+    struct timespec time;
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    return time.tv_sec * 10e9 + time.tv_nsec;
+}
 
 #include <SDL2/SDL.h>
 
@@ -111,6 +123,10 @@ void loop()
     SDL_RenderPresent(g_renderer);
 }
 
+long GetClockDiff()
+{
+}
+
 int main(int argc, char** argv)
 {
     SDL_Window* window;
@@ -164,7 +180,18 @@ int main(int argc, char** argv)
     /* Loop, waiting for QUIT or the escape key */
     g_frame = 0;
 
+    uint64_t previousTime = GetTime();
+    uint64_t currentTime = 0;
+
     while (!g_done) {
+        currentTime = GetTime();
+
+        if (currentTime - previousTime < kInterval) {
+            continue;
+        }
+
+        previousTime = currentTime;
+
         loop();
     }
 
