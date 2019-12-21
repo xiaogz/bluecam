@@ -212,7 +212,8 @@ void loop()
                     if ((temp == 0xD9) && (temp_last == 0xFF)) {
                         break;
                     }
-                    delayMicroseconds(15);
+                    //delayMicroseconds(15);
+                    delayMicroseconds(3);
                 }
                 myCAM.CS_HIGH();
                 myCAM.clear_fifo_flag();
