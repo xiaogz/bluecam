@@ -19,19 +19,147 @@ using UPtrBytes = std::unique_ptr<uint8_t[]>;
 
 // we are receiving JPEG image
 static constexpr const size_t k1KB = 1024;
-static constexpr size_t kJpgBufferSize = 128 * k1KB;
+static constexpr size_t kJpgBufferSize = 32 * k1KB;
 static constexpr size_t kMaxTimeoutCount = 20;
 static constexpr size_t kSerialBufferSize = 100;
+static constexpr size_t kTotalFrames = 60;
+static constexpr const char * kAppName = "BlueCam";
 static constexpr size_t kVideoWidth = 320;
 static constexpr size_t kVideoHeight = 240;
 
-//static int g_serialPort = -1;
+// TODO: we can make all this into a class
+// SDL-specific stuff
+////////////////////
+// begin of namespace GUI
+namespace GUI
+{
+////////////////////
+
+SDL_Window * g_window = nullptr;
+SDL_Renderer * g_renderer = nullptr;
+//SDL_Texture * g_texture = nullptr;
+SDL_bool g_isDone = SDL_FALSE;
+
+bool InitGUI(const char * appName, const size_t width, const size_t height)
+{
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("failed to initialize SDL\n");
+        return false;
+    }
+
+    g_window = SDL_CreateWindow(
+        appName,
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        width,
+        height,
+        SDL_WINDOW_RESIZABLE);
+    if (!g_window) {
+        printf("failed to create SDL window\n");
+        return false;
+    }
+
+    const int firstAvailableRenderer = -1;
+    const int flags = 0;
+    g_renderer = SDL_CreateRenderer(g_window, firstAvailableRenderer, flags);
+    if (!g_renderer) {
+        printf("failed to create renderer\n");
+        return false;
+    }
+
+    return true;
+
+    /*
+    g_texture = SDL_CreateTexture(
+        g_renderer,
+        SDL_PIXELFORMAT_RGB24,
+        SDL_TEXTUREACCESS_STREAMING,
+        width,
+        height);
+    if (!g_texture) {
+        printf("failed to create texture\n");
+        return false;
+    }
+    */
+}
+
+// this function relies on some global variables
+bool UpdateFrame(const uint8_t * pixelData)
+{
+    constexpr const int depth = 24;
+    constexpr const int pitch = 3 * kVideoWidth;
+
+    SDL_Surface * surface = SDL_CreateRGBSurfaceFrom(
+        (void *)pixelData,
+        kVideoWidth,
+        kVideoHeight,
+        depth,
+        pitch,
+        0x000000ff,
+        0x0000ff00,
+        0x00ff0000,
+        0);
+
+    if (!surface) {
+        printf("failed to create surface!\n");
+        return false;
+    }
+
+    SDL_Texture * texture = SDL_CreateTextureFromSurface(g_renderer, surface);
+    if (!texture) {
+        printf("failed to create texture from surface!\n");
+        return false;
+    }
+
+    SDL_RenderClear(g_renderer);
+    SDL_RenderCopy(g_renderer, texture, NULL, NULL);
+    SDL_RenderPresent(g_renderer);
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+
+    return true;
+}
+
+void Cleanup()
+{
+    if (g_window) {
+        SDL_DestroyWindow(g_window);
+        g_window = nullptr;
+    }
+
+    if (g_renderer) {
+        SDL_DestroyRenderer(g_renderer);
+        g_renderer = nullptr;
+    }
+
+    /*
+    if (g_texture) {
+        SDL_DestroyTexture(g_texture);
+        g_texture = nullptr;
+    }
+    */
+
+    SDL_Quit();
+}
+
+////////////////////
+// end of namespace GUI
+};
+////////////////////
 
 enum class ParserState : uint32_t
 {
     SeekStart,
     SeekEnd,
 };
+
+uint64_t GetTime()
+{
+    struct timespec time;
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    return time.tv_sec * 10e9 + time.tv_nsec;
+}
 
 int set_interface_attribs(int serialPort, int speed)
 {
@@ -156,6 +284,11 @@ void cleanup()
 
 int main(int argc, char ** argv)
 {
+    if (!GUI::InitGUI(kAppName, kVideoWidth, kVideoHeight)) {
+        printf("Error initializing SDL GUI\n");
+        return -1;
+    }
+
     const char * portname = "/dev/ttyACM0";
     //const char * portname = "/dev/rfcomm0";
 
@@ -196,7 +329,10 @@ int main(int argc, char ** argv)
     if (wlen != ::strlen(cmd)) {
         printf("Error from write: %d, %d\n", wlen, errno);
     }
+    // this delay causes first frame's read to be incomplete
     //::tcdrain(serialPort); /* delay for output */
+
+    int streamState = 0; // 0 for seeking start, 1 for seeking end
 
     /* simple noncanonical input */
     while (1) {
@@ -209,6 +345,7 @@ int main(int argc, char ** argv)
         //printf("read %d bytes\n", bytesRead);
 
         if (bytesRead > 0) {
+
             ::memcpy(&jpgBuffer[totalBytesReceived], serialBuffer, bytesRead);
 
             totalBytesReceived += bytesRead;
@@ -224,8 +361,21 @@ int main(int argc, char ** argv)
                     jpegFrameSize = totalBytesReceived;
                     printf("jpeg frame has %lu bytes.\n", jpegFrameSize);
                     totalBytesReceived = 0;
+
+                    UPtrBytes rawImage = DecompressJpegImage(jpgBuffer.get(), jpegFrameSize);
+
+                    if (rawImage.get() == nullptr) {
+                        printf("jpeg decompression failed\n");
+                        continue;
+                    }
+
+                    if (!GUI::UpdateFrame(rawImage.get())) {
+                        GUI::Cleanup();
+                        return 1;
+                    }
+
                     capturedFrames += 1;
-                    if (capturedFrames > 10) {
+                    if (capturedFrames >= kTotalFrames) {
                         break;
                     }
                     continue;
@@ -276,5 +426,7 @@ int main(int argc, char ** argv)
     if (close(serialPort) != 0) {
         printf("close() failed with %d: %s\n", errno, strerror(errno));
     }
+
+    GUI::Cleanup();
 }
 
