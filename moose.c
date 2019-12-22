@@ -123,10 +123,6 @@ void loop()
     SDL_RenderPresent(g_renderer);
 }
 
-long GetClockDiff()
-{
-}
-
 int main(int argc, char** argv)
 {
     SDL_Window* window;
