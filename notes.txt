@@ -82,8 +82,28 @@ TODO:   - look into if breadboard's circuitry could affect baud rate; no time no
     - I don't care about GUI portability right now; I think SDL2 works; the most pressing resource is time
         - https://trenki2.github.io/blog/2017/06/02/using-sdl2-with-cmake/ for CMake setup
         - http://lazyfoo.net/SDL_tutorials/lesson01/index2.php for tutorial
+        - http://hg.libsdl.org/SDL/file/default/test/teststreaming.c seems to be simplest one?
 
 - due to time constraints I'll just hardcode default resolution to 320 x 240
+
+- after the disappointing missed flight, at least I have time to polish my work...
+    - I wanted the whole server software system to be more modular; currently
+      it's cam + desktop SDL app. However I would like to move the backend onto
+      Android NDK at some point. The system needs to be modular enough. There's
+      at least 3 components: frontend (mainly SDL), backend (mainly cpp image
+      processing), and the middleware (receives data stream from serial port,
+      transforms data into delineated jpeg image frames, sends it to backend
+      for processing, and gets back processed image, pipes that to frontend for
+      display.
+
+- somehow, neither serial port nor bluetooth was receiving data despite not changing any significant logic... I then found out about resetting serial ports in another way: `screen <port> <baud rate>`, then exit out (can use tmux abrupt exit), `ps -ef | grep ttyAC*` and kill the pid with the open pipe. Then afterwards serial port works...
+
+- SDL2 good SO post: https://stackoverflow.com/a/21007477
+
+- encountered issues:
+    - serial port 230400bds works via usb serial but on bluetooth it is finicky and drops connection when sending image data; some google search mentions that 3.3V TX to 5V RX might also need voltage pullup? I'm already protecting 5V TX to 3.3V RX via voltage divider
+
+- TODO: use neuralink-presentation for slides but use libreoffice powerpoint for diagrams
 
 - TODO: think of how to validate the performance of our project
     - how many frames per second can the dashcam send over bluetooth? try different resolutions?
