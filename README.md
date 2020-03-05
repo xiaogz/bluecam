@@ -1,3 +1,19 @@
+# BlueCam
+
+## Hardware Requirements
+1. [Arduino Uno R3 microcontroller.](https://www.amazon.ca/Elegoo-Board-ATmega328P-ATMEGA16U2-Arduino/dp/B01EWOE0UU/)
+2. [ArduCAM OV2640 Mini 2MP Plus camera module.](https://www.amazon.ca/Arducam-Module-Megapixels-Arduino-Mega2560/dp/B012UXNDOY/)
+3. [HC-05 Bluetooth module.](https://www.amazon.ca/DSD-TECH-HC-05-Pass-Through-Communication/dp/B01G9KSAF6/)
+4. An Ubuntu (or Debian-based?) laptop with Bluetooth capabilities.
+
+## Software Requirements
+- `sudo apt install libjpeg-turbo8-dev libsdl2-dev libpthread-stubs0-dev`
+    - somehow, `sudo apt install libjpeg-dev` only installs documentation and
+      a copyright text...?
+## Hardware Setup
+
+## Software Setup
+
 Build
 -----
 1. `sudo apt install libjpeg-turbo8-dev libsdl2-dev libpthread-stubs0-dev`;
@@ -18,8 +34,8 @@ Goal
       time and wrote a preliminary Canny edge detection algorithm. It seemed
       natural to simply buy an Arduino camera to try and attempt image
       processing in real-time. The OV2640 was the only one that can interface
-      with the Uno R3 using the CSI interface. Also, the Amazon revies of the
-      camera indicated that other people have had success making the camera on
+      with the Uno R3 using the CSI interface. Also, the Amazon reviews of the
+      camera indicated that other people have had success using the camera on
       the Uno R3 despite its limited processing speed.
 - image processing server consists of:
     - Samsung Galaxy A5 2017 phone (interfacing via Bluetooth)
@@ -36,8 +52,9 @@ Goal
 - Bluetooth needs 3.5V input but Arduino outputs 5V so I needed to order
   resistors along with my camera
 
-References
-----------
-- my phone specs https://www.gsmarena.com/samsung_galaxy_a5_(2017)-8494.php
-    - GPU supports OpenCL https://www.notebookcheck.net/ARM-Mali-T830-MP3.196668.0.html
+Outcome
+-------
+- did not make the Android image processing server component; opted for a C++ binary run from a Bluetooth compatible laptop
+- image processing was very basic: no license plate recognition at all but I do have RGB to grayscale processing, Gaussian blurring, and Canny edge detection
+- got more familiar with Arduino hardware setup and programming
 
