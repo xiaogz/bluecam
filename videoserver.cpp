@@ -1,4 +1,4 @@
-// taken from https://stackoverflow.com/a/38318768
+// serial port comm taken from https://stackoverflow.com/a/38318768
 
 #include <SDL2/SDL.h>
 
@@ -14,20 +14,20 @@
 #include <unistd.h>
 #include <vector>
 
-#include "serialcomm.hpp"
 #include "utility.hpp"
 
 using UPtrBytes = std::unique_ptr<uint8_t[]>;
 
 // we are receiving JPEG image
 static constexpr const size_t k1KB = 1024;
-static constexpr size_t kJpgBufferSize = 32 * k1KB;
-static constexpr size_t kMaxTimeoutCount = 20;
-static constexpr size_t kSerialBufferSize = 100;
-static constexpr size_t kTotalFrames = 5;
+static constexpr const size_t kJpgBufferSize = 32 * k1KB;
+static constexpr const size_t kMaxTimeoutCount = 20;
+static constexpr const size_t kSerialBufferSize = 100;
+//! This controls how many total frames the software will capture before terminating.
+static constexpr const size_t kTotalFrames = 30;
 static constexpr const char* kAppName = "BlueCam";
-static constexpr size_t kVideoWidth = 320;
-static constexpr size_t kVideoHeight = 240;
+static constexpr const size_t kVideoWidth = 320;
+static constexpr const size_t kVideoHeight = 240;
 
 // TODO: we can make all this into a class
 // SDL-specific stuff
@@ -312,8 +312,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    const char* portname = "/dev/ttyACM0";
-    // const char * portname = "/dev/rfcomm0";
+    //constexpr const char* portname = "/dev/ttyACM0"; // direct USB-serial comm (for debugging)
+    constexpr const char * portname = "/dev/rfcomm0"; // Bluetooth-serial comm
 
     printf("before opening\n");
     int serialPort = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
@@ -325,8 +325,8 @@ int main(int argc, char** argv)
     // set_interface_attribs(serialPort, B460800);
     // HC05 says 460800 baud rate is possible but I couldn't get it to work
     int retval = set_interface_attribs(serialPort, B230400);
-    // int retval = set_interface_attribs(serialPort, B460800);
-    // int retval = set_interface_attribs(serialPort, B921600);
+    //int retval = set_interface_attribs(serialPort, B460800);
+    //int retval = set_interface_attribs(serialPort, B921600);
     // set_interface_attribs(serialPort, B115200);
     // set_mincount(serialPort, 0);                /* set to pure timed read */
     if (retval != 0) {
@@ -424,9 +424,15 @@ int main(int argc, char** argv)
 
                     capturedFrames += 1;
                     if (capturedFrames >= kTotalFrames) {
-                        // capture last frame for eye validation
+                        /*
+                        // for debugging: capture last frame for eye validation
                         if (!Util::WritePPMImageToFile(
                               "output-color.pgm", rawImage.get(), kVideoWidth, kVideoHeight, 3)) {
+                            printf("failed to write image to file\n");
+                        }
+
+                        if (!Util::WritePPMImageToFile(
+                              "output-gray.ppm", grayImage.get(), kVideoWidth, kVideoHeight, 1)) {
                             printf("failed to write image to file\n");
                         }
 
@@ -439,6 +445,7 @@ int main(int argc, char** argv)
                               "output-edges.pgm", edgeGradients.get(), kVideoWidth, kVideoHeight, 1)) {
                             printf("failed to write image to file\n");
                         }
+                        */
 
                         break;
                     }
@@ -462,7 +469,13 @@ int main(int argc, char** argv)
 
     printf("captured %u frames\n", capturedFrames);
 
-    const char* cmd2 = "x";
+    const char* cmd2 = "x\r\n";
+    wlen = write(serialPort, cmd2, ::strlen(cmd2));
+    if (wlen != ::strlen(cmd2)) {
+        printf("Error from write: %d, %d\n", wlen, errno);
+    }
+    ::tcdrain(serialPort); /* delay for output */
+
     wlen = write(serialPort, cmd2, ::strlen(cmd2));
     if (wlen != ::strlen(cmd2)) {
         printf("Error from write: %d, %d\n", wlen, errno);

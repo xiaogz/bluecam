@@ -12,7 +12,6 @@ find_package(SDL2 REQUIRED)
 
 set(SRCS
     "videoserver.cpp"
-    "serialcomm.cpp"
     "imageproc.cpp"
     "utility.cpp"
 )

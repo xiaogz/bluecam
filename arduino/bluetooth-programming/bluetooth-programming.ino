@@ -8,9 +8,9 @@
 // Taken from http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/
 
 #include <SoftwareSerial.h>
-SoftwareSerial BTSerial(2, 3); // RX | TX
-// Connect the HC-05 TX to Arduino pin 2 RX.
-// Connect the HC-05 RX to Arduino pin 3 TX through a voltage divider.
+SoftwareSerial BTSerial(4, 5); // RX | TX
+// Connect the HC-05 TX to Arduino pin 4 RX.
+// Connect the HC-05 RX to Arduino pin 5 TX through a voltage divider.
 
 char c = ' ';
 
@@ -26,11 +26,11 @@ void setup()
 
 void loop()
 {
-    // Keep reading from HC-05 and send to Arduino Serial Monitor
-    if (BTSerial.available())
-        Serial.write(BTSerial.read());
-
     // Keep reading from Arduino Serial Monitor and send to HC-05
     if (Serial.available())
         BTSerial.write(Serial.read());
+
+    // Keep reading from HC-05 and send to Arduino Serial Monitor
+    if (BTSerial.available())
+        Serial.write(BTSerial.read());
 }

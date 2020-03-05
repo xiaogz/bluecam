@@ -23,63 +23,104 @@
       possible to avoid wasting current but also as large as possible to .
     - in addition, the martyncurrey site says to just use 1k & 2k resistors
 
-- just realized that both the camera and the bluetooth modules need to use the RX & TX ports. Googling turned up this (https://www.arduino.cc/en/Reference/softwareSerial) which is using a software library to make other digital ports emulate RX/TX but some forum post (https://forum.arduino.cc/index.php?topic=480844.0) suggests it's not good enough?
+- just realized that both the camera and the bluetooth modules need to use the
+  RX & TX ports. Googling turned up this
+  (https://www.arduino.cc/en/Reference/softwareSerial) which is using
+  a software library to make other digital ports emulate RX/TX but some forum
+  post (https://forum.arduino.cc/index.php?topic=480844.0) suggests it's not
+  good enough?
 
-- read resistor bands left to right with closer bands being on left side; https://www.digikey.ca/en/resources/conversion-calculators/conversion-calculator-resistor-color-code-5-band helps me check that the bands are actually 1k & 2k
+- read resistor bands left to right with closer bands being on left side;
+  https://www.digikey.ca/en/resources/conversion-calculators/conversion-calculator-resistor-color-code-5-band
+  helps me check that the bands are actually 1k & 2k
 
-- TODO: https://github.com/arduino/arduino-cli/blob/master/CONTRIBUTING.md incorporate arduino-cli so that we can automate the arduino setup
+- TODO: https://github.com/arduino/arduino-cli/blob/master/CONTRIBUTING.md
+  incorporate arduino-cli so that we can automate the arduino setup (not done)
 
-** apparently boards with only 1 RX & TX can create conflicts if those HW ports are occupied while a sketch is being uploaded to the board (see https://www.instructables.com/id/Remotely-Control-LED-using-HC-05-Bluetooth-Arduino/)
+- apparently boards with only 1 RX & TX can create conflicts if those HW ports
+  are occupied while a sketch is being uploaded to the board (see
+  https://www.instructables.com/id/Remotely-Control-LED-using-HC-05-Bluetooth-Arduino/)
 
 ** sample sketches using SoftSerial library did not work! SoftSerial is not reliable...
     - nope it was just me not understanding how serial ports worked at all...
-    - tutorial http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/ uses the HW serial port to communicate between PC and Uno R3 and a SW emulated serial port to communicate between Uno R3 and the HC05
-    - AT commands work if you just hold down the small button on the HC05 module. You don't need to hold it all the time: just once when powering it up such that the blinker is once every 5s (enters AT mode) and then everytime you need to send it a command
-** try https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html which limits us to pin 8 & 9
+    - tutorial
+      http://www.martyncurrey.com/arduino-with-hc-05-bluetooth-module-in-slave-mode/
+      uses the HW serial port to communicate between PC and Uno R3 and a SW
+      emulated serial port to communicate between Uno R3 and the HC05
+    - AT commands work if you just hold down the small button on the HC05
+      module. You don't need to hold it all the time: just once when powering
+      it up such that the blinker is once every 5s (enters AT mode) and then
+      everytime you need to send it a command
+- try https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html which limits us to pin 8 & 9
     - this is a future TODO in case the default library is not fast enough
 
-- https://www.arducam.com/arducam-bluetooth-module-wireless-image-system/ discusses the OV2640 camera's data transfer rate using different image capture configs; seems like we will be stretching the hardware to its limit. We need JPEG compression so that we send 3-6kBytes per frame instead of 150kBytes for a 320x240 image
+- https://www.arducam.com/arducam-bluetooth-module-wireless-image-system/
+  discusses the OV2640 camera's data transfer rate using different image
+  capture configs; seems like we will be stretching the hardware to its limit.
+  We need JPEG compression so that we send 3-6kBytes per frame instead of
+  150kBytes for a 320x240 image
 
-- IMPORTANT: Arduino's USB communicates on UART serial protocol; if any module is sending data using port 0/1 then uploading sketches can fail
+- IMPORTANT: Arduino's USB communicates on UART serial protocol; if any module
+  is sending data using port 0/1 then uploading sketches can fail
 
 - IMPORTANT: use F() macros for Arduino debug statements
 
-- actually ArduCAM has their own Github repo with a working bluetooth + camera arduino project
-    - the working bluetooth camera project is for 2MP mini and not for 2MP mini plus; I have to ensure there's nothing breaking the code and/or circuits
-        - so far, in arduino/libraries/ArduCAM/ArduCAM.h, we see that the mini has smaller frame buffer (384kb) compared to the mini plus (8Mb)
+- actually ArduCAM has their own Github repo with a working bluetooth + camera
+  arduino project
+    - the working bluetooth camera project is for 2MP mini and not for 2MP mini
+      plus; I have to ensure there's nothing breaking the code and/or circuits
+        - so far, in arduino/libraries/ArduCAM/ArduCAM.h, we see that the mini
+          has smaller frame buffer (384kb) compared to the mini plus (8Mb)
 
-- USB connection to Android phone also counts as one of the /dev/ttyACM ports; don't get confused by Arduino upload not working
+- USB connection to Android phone also counts as one of the /dev/ttyACM ports; don't get confused by
+  Arduino upload not working
 
-- actually we might just pivot and make the server on laptop; Android bluetooth serial ports cannot increase its baud rate beyond the default 115200 (see https://stackoverflow.com/a/23888958)
-    - actually seems like the limit is just 115200... even opening bluetooth serial port on linux terminal and configuring the baud rate beyond 115200 we get garbage :(
-    - then there's no point using desktop linux because both linux and Android phone will hit the 115200 data tranfer limit
-TODO:   - the relationship between voltage divider resistor values and baud rate should be looked into but there's no time now
-TODO:   - look into if breadboard's circuitry could affect baud rate; no time now
+- actually we might just pivot and make the server on laptop; Android bluetooth serial ports cannot
+  increase its baud rate beyond the default 115200 (see https://stackoverflow.com/a/23888958)
+    - actually seems like the limit is just 115200... even opening bluetooth serial port on linux
+      terminal and configuring the baud rate beyond 115200 we get garbage :(
+    - then there's no point using desktop linux because both linux and Android phone will hit the
+      115200 data tranfer limit
+- TODO: the relationship between voltage divider resistor values and baud rate should be looked into
+  but there's no time now
+- TODO: look into if breadboard's circuitry could affect baud rate; no time now
     - actually, the max limit is 230400 baud rate; not the best but I'll take what I can get
 
-- there's a really helpful askubuntu post on working with bluetooth and opening serial ports (https://askubuntu.com/a/869951)
+- there's a really helpful askubuntu post on working with bluetooth and opening serial ports
+  (https://askubuntu.com/a/869951)
 
 - Android programming might take a long time... I'll look into JPEG compression for now
 
-** in the end, we are always communicating over serial port, whether it's implemented over bluetooth or USB changes little about the image analysis part
+- in the end, we are always communicating over serial port, whether it's
+  implemented over bluetooth or USB changes little about the image analysis
+  part
     - Android app + NDK is not looking good with given amount of time...
 
 - debugging checklist:
-    * did the Arduino IDE select the proper port? Between reconnects it could jump from ACM1 to ACM2; Restart the IDE if it cannot see the port but terminal can via "ls /dev/ttyACM*"
-    * are all the cables connected properly? If you're on bluetooth-programming vs dashcam, there's different connectivities
-        * also, if you're using the serial port for bluetooth transmissions to server, you can't upload via USB
+    * did the Arduino IDE select the proper port? Between reconnects it could
+      jump from ACM1 to ACM2; Restart the IDE if it cannot see the port but
+      terminal can via "ls /dev/ttyACM*"
+    * are all the cables connected properly? If you're on bluetooth-programming
+      vs dashcam, there's different connectivities
+        * also, if you're using the serial port for bluetooth transmissions to
+          server, you can't upload via USB
     * is the uploaded Arduino sketch the one you wanted?
     * are the baud rates setup properly?
     * is the Android source code proper?
 
-- TODO: create a minimal GUI to at least render the received & processed images
+- create a minimal GUI to at least render the received & processed images
     - first thought was Qt but it seemed really heavyweight
-    - then thought of SDL because of a SO post but the boilerplate seems too much 
-    - then remembered imgui used in graphics programming course but it requires setting up OpenGL; I just want a simple window that updates with new images
-    - imgui mentioned it's "immediate mode gui" so I looked that up and came across Immediate-Mode-UI/Nuklear which seems to be what I need
-    - nuklear has good documentation and you only compile what you need :D https://cdn.statically.io/gh/Immediate-Mode-UI/nuklear/master/doc/nuklear.html#nuklear/usage
-    - hmm seems like nuklear is an abstraction of draw commands and it still needs platform-specific renderer like X11, GDI, OpenGL, or Vulkan
-    - I don't care about GUI portability right now; I think SDL2 works; the most pressing resource is time
+    - then thought of SDL because of a SO post but the boilerplate seems too much
+    - then remembered imgui used in graphics programming course but it requires setting up OpenGL;
+      I just want a simple window that updates with new images
+    - imgui mentioned it's "immediate mode gui" so I looked that up and came across
+      Immediate-Mode-UI/Nuklear which seems to be what I need
+    - nuklear has good documentation and you only compile what you need :D
+      https://cdn.statically.io/gh/Immediate-Mode-UI/nuklear/master/doc/nuklear.html#nuklear/usage
+    - hmm seems like nuklear is an abstraction of draw commands and it still needs platform-specific
+      renderer like X11, GDI, OpenGL, or Vulkan
+    - I don't care about GUI portability right now; I think SDL2 works; the most pressing resource
+      is time
         - https://trenki2.github.io/blog/2017/06/02/using-sdl2-with-cmake/ for CMake setup
         - http://lazyfoo.net/SDL_tutorials/lesson01/index2.php for tutorial
         - http://hg.libsdl.org/SDL/file/default/test/teststreaming.c seems to be simplest one?
@@ -96,14 +137,26 @@ TODO:   - look into if breadboard's circuitry could affect baud rate; no time no
       for processing, and gets back processed image, pipes that to frontend for
       display.
 
-- somehow, neither serial port nor bluetooth was receiving data despite not changing any significant logic... I then found out about resetting serial ports in another way: `screen <port> <baud rate>`, then exit out (can use tmux abrupt exit), `ps -ef | grep ttyAC*` and kill the pid with the open pipe. Then afterwards serial port works...
+- somehow, neither serial port nor bluetooth was receiving data despite not
+  changing any significant logic... I then found out about resetting serial
+  ports in another way: `screen <port> <baud rate>`, then exit out (can use
+  tmux abrupt exit), `ps -ef | grep ttyAC*` and kill the pid with the open
+  pipe. Then afterwards serial port works...
 
 - SDL2 good SO post: https://stackoverflow.com/a/21007477
 
 - encountered issues:
-    - serial port 230400bds works via usb serial but on bluetooth it is finicky and drops connection when sending image data; some google search mentions that 3.3V TX to 5V RX might also need voltage pullup? I'm already protecting 5V TX to 3.3V RX via voltage divider
-
-- TODO: use neuralink-presentation for slides but use libreoffice powerpoint for diagrams
+    - serial port 230400bds works via usb serial but on bluetooth it is finicky and drops connection
+      when sending image data; some google search mentions that 3.3V TX to 5V RX might also need
+      voltage pullup? I'm already protecting 5V TX to 3.3V RX via voltage divider
+    - solved the bluetooth issue by providing it 5V power (in parallel with the camera's power
+      supply) instead of separate 3.3V power supply
+    - solved general breadboard reliability issues by using direct connections
+      via female-male pins as much as possible; bluetooth RX needs voltage
+      divider to step down Arduino's 5V TX to 3.3V so we need breaboard but
+      everything else I reduced it
+    - sometimes the bluetooth stopped working due to my resistor disconnecting from the
+      breadboard... I can see why it's for prototyping only
 
 - TODO: think of how to validate the performance of our project
     - how many frames per second can the dashcam send over bluetooth? try different resolutions?
