@@ -333,7 +333,7 @@ int main(int argc, char** argv)
         printf("failed to set baud rate\n");
     }
 
-    // we alternate containers so that data stream is buffered in 1 container
+    // TODO: alternate containers so that data stream is buffered in 1 container
     // while jpeg data is processed in another one
     auto jpgBuffer = std::make_unique<uint8_t[]>(kJpgBufferSize);
     auto jpgBuffer2 = std::make_unique<uint8_t[]>(kJpgBufferSize);
