@@ -25,6 +25,9 @@ Goal
 - challenge myself technically
 - make a dashboard camera that can record video and read license plates within
   2-3 weeks during evening and weekend hours
+
+Project details
+-------
 - dashboard camera consists of:
     - Arduino Uno R3 (micro controller)
     - OV2640 camera (2 Megapixels)
@@ -38,23 +41,59 @@ Goal
       camera indicated that other people have had success using the camera on
       the Uno R3 despite its limited processing speed.
 - image processing server consists of:
-    - Samsung Galaxy A5 2017 phone (interfacing via Bluetooth)
-        - CPU: Octa-core 1.9 GHz Cortex-A53 (ARM)
-        - GPU: Mali-T830MP3 (OpenCL 1.2 support)
-    - Android app with Bluetooth to communicate with Arduino camera
-    - image processing library written in C++ and packaged using NDK
-    * I implemented the Canny edge detection algorithm in C++17 on a gRPC
-      server and wanted to re-use that. Also, I'm not as familiar with Java
-      (nor Kotlin). The other reason for C++ and NDK usage is that I plan on
-      re-writing the image processing algorithms leveraging GPGPU and from my
-      limited research, my phone's GPU supports OpenCL 1.2 via C++ and NDK
-      only.
+    - C++ binary running on a Linux laptop and communicating with the camera via Bluetooth
+    - image processing library written in C++ and built using CMake
+    - I opted for a C++ binary run from a Bluetooth compatible laptop instead of the Android image processing server component; I wanted to focus more on the computer vision algorithms and embedded software rather than Android development
+
 - Bluetooth needs 3.5V input but Arduino outputs 5V so I needed to order
   resistors along with my camera
 
+Software Architecture Details
+-------
+The Arduino camera uses a Bluetooth module that emulates serial port communication and transmits image data in JPEG format. See [`loop()`](./arduino/dashcam/dashcam.ino); I took sample code from the camera module's vendor and refactored it to support the OV2640 model.
+
+The [video server](videoserver.cpp) uses [SDL](https://github.com/libsdl-org/SDL) to display the image processing pipeline's output for development and debugging purposes. Its `main()` loop calls all the computer-vision-related image processing functions declared in [`utility.hpp`](utility.hpp). All the GUI-related code is in its own namespace and I intend to split them into a separate class *soon*.
+
+I chose to store each frame as a 1D vector over a 2D vector for better data locality. Pixel coordinates can simply be calculated as `y + x * row length`.
+
+The sample pictures below is the top-right edge of my monitor to demonstrate edge detection.
+
+The image pipeline functions are implemented in [`utility.cpp`](utility.cpp) and so far consists of:
+
+![sample picture in colour](./resources/output-color.jpg)
+
+1. converting JPEG frame to greyscale
+
+![sample picture in greyscale](./resources/output-gray.jpg)
+
+2. smoothing the greyscale image using Gaussian blur
+-- note that one pass of a 2D Gaussian kernel is equivalent to 2 passes of a 1D horizontal Gaussian kernel and one vertical Gaussian kernel; this optimization removes 1 layer of for loop!
+
+![sample picture after Gaussian smoothing](./resources/output-blurred.jpg)
+
+3. detect edges by convolving the greyscale image with horizontal and vertical Sobel operators or kernels
+
+![sample picture with Sobel edge detection](./resources/output-edges-sobel.jpg)
+
+4. cleanup very thick edges by suppressing unnecessary repeated edges or nonmax edges
+
+![sample picture after nonmax edge suppression](./resources/output-edges-nonmax.jpg)
+
+5. cleanup insignificant edges or false positives by:
+
+    a. computing the Otsu threshold, which takes in the edge image after nonmax edge suppression and plots a histogram of black intensity values from 0 to 256 and then calculates a threshold intensity value that can split the intensity histogram or distribution into 2 parts
+
+    b. apply hysteresis edge filtering using the threshold computed from Otsu's method to discard weak-intensity edges straightaway and discard medium-intensity edges IF they are not close to any strong-intensity edges
+
+![sample picture after using Otsu threshold and hysteresis](./resources/output-edges-otsu-hysteresis.jpg)
+
+Note that all the steps make up the process of Canny edge detection.
+
+Finally, the video server calls `UpdateGrayFrame()` to render the output to the screen.
+
 Outcome
 -------
-- did not make the Android image processing server component; opted for a C++ binary run from a Bluetooth compatible laptop
-- image processing was very basic: no license plate recognition at all but I do have RGB to grayscale processing, Gaussian blurring, and Canny edge detection
-- got more familiar with Arduino hardware setup and programming
+- I did not finish the license plate reader but did implement the Canny edge detection.
+- I implemented RGB to grayscale processing, Gaussian blurring, Sobel edge detection, non-maximum edge suppression, Otsu thresholding, and hysteresis edge filtering.
+- I learnt more about Arduino hardware development.
 
